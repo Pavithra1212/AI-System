@@ -1,6 +1,10 @@
 import os
 import sys
+import secrets
+import logging
 from pathlib import Path
+
+_config_logger = logging.getLogger("app.config")
 
 # Base directory
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -17,8 +21,12 @@ if not SECRET_KEY:
     if DEBUG:
         SECRET_KEY = "dev-only-insecure-key-do-not-use-in-production"
     else:
-        print("FATAL: SECRET_KEY environment variable is not set. Refusing to start.")
-        sys.exit(1)
+        SECRET_KEY = secrets.token_hex(32)
+        _config_logger.warning(
+            "⚠️  SECRET_KEY not set! Generated a random key. "
+            "JWTs will be invalidated on every restart. "
+            "Set SECRET_KEY in your Railway environment variables!"
+        )
 
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "480"))

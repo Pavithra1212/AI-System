@@ -41,4 +41,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=5 \
     CMD curl -f http://localhost:${PORT}/api/health || exit 1
 
 # Shell form so $PORT is expanded at runtime
-CMD uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers 2
+CMD uvicorn app.main:app --host 0.0.0.0 --port $PORT
