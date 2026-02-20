@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Student Dashboard — Report lost or found items on your campus.">
+    <title>Student Dashboard — Campus Lost & Found</title>
+    <link rel="stylesheet" href="/css/styles.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="/js/api.js"></script>
+    <script src="/js/student.js"></script>
+</head>
+
+<body>
+    <div x-data="createStudentApp()" x-init="init()" class="dashboard-layout">
+        <!-- Header -->
+        <header class="dashboard-header">
+            <div class="dashboard-brand">
+                <span class="dashboard-brand-icon">🔍</span>
+                <div>
+                    <div class="dashboard-brand-text">Campus Lost & Found</div>
+                    <div class="dashboard-brand-sub">AI-Powered Recovery</div>
+                </div>
+            </div>
+            <div class="dashboard-user">
+                <div style="text-align: right;">
+                    <div class="dashboard-user-name" x-text="user?.username"></div>
+                    <div class="dashboard-user-section" x-text="user?.section + ' • ' + user?.department"></div>
+                </div>
+                <button class="btn-logout" onclick="logout()">Logout</button>
+            </div>
+        </header>
+
+        <!-- Content -->
+        <div class="dashboard-content">
+            <!-- Hero -->
+            <div class="student-hero">
+                <h1>📋 Report an Item</h1>
+                <p>Follow the steps below to submit a lost or found report</p>
+            </div>
+
+            <div class="chat-form-container">
+                <!-- Step 0: Select Type -->
+                <div class="chat-step visible" data-step="0">
+                    <div class="chat-bubble chat-bubble-bot">
+                        <div class="chat-bubble-label">🤖 AI Assistant</div>
+                        <p>Hello! What would you like to report today?</p>
+                    </div>
+                    <div class="report-type-selector">
+                        <div class="report-type-card lost-card" :class="{ 'selected': reportType === 'lost' }"
+                            @click="selectType('lost')">
+                            <div class="report-type-icon">😟</div>
+                            <div class="report-type-label">I Lost Something</div>
+                        </div>
+                        <div class="report-type-card found-card" :class="{ 'selected': reportType === 'found' }"
+                            @click="selectType('found')">
+                            <div class="report-type-icon">🎉</div>
+                            <div class="report-type-label">I Found Something</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 1: Item Name -->
+                <template x-if="maxStep >= 1">
+                    <div class="chat-step animate-fade-in-up" :class="{ 'visible': step >= 1 }" data-step="1">
+                        <div class="chat-bubble chat-bubble-bot">
+                            <div class="chat-bubble-label">🤖 AI Assistant</div>
+                            <p x-text="reportType === 'lost' ? 'What item did you lose?' : 'What item did you find?'">
+                            </p>
+                        </div>
+                        <div class="chat-input-area">
+                            <input type="text" class="form-input" x-model="itemName"
+                                placeholder="e.g. Blue Wireless Earbuds" @keyup.enter="itemName.trim() && nextStep()">
+                            <div style="margin-top: 12px; display: flex; gap: 8px; justify-content: flex-end;">
+                                <button class="btn btn-ghost btn-sm" @click="prevStep()">← Back</button>
+                                <button class="btn btn-primary btn-sm" @click="nextStep()"
+                                    :disabled="!itemName.trim()">Continue →</button>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- Step 2: Category -->
+                <template x-if="maxStep >= 2">
+                    <div class="chat-step animate-fade-in-up" :class="{ 'visible': step >= 2 }" data-step="2">
+                        <div class="chat-bubble chat-bubble-bot">
+                            <div class="chat-bubble-label">🤖 AI Assistant</div>
+                            <p>What category does <strong x-text="itemName"></strong> belong to?</p>
+                        </div>
+                        <div class="chat-input-area">
+                            <select class="form-select" x-model="category" @change="category && nextStep()">
+                                <option value="">Select a category...</option>
+                                <template x-for="cat in categories" :key="cat">
+                                    <option :value="cat" x-text="cat"></option>
+                                </template>
+                            </select>
+                            <div style="margin-top: 12px; display: flex; gap: 8px; justify-content: flex-end;">
+                                <button class="btn btn-ghost btn-sm" @click="prevStep()">← Back</button>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- Step 3: Description -->
+                <template x-if="maxStep >= 3">
+                    <div class="chat-step animate-fade-in-up" :class="{ 'visible': step >= 3 }" data-step="3">
+                        <div class="chat-bubble chat-bubble-bot">
+                            <div class="chat-bubble-label">🤖 AI Assistant</div>
+                            <p>Please describe the item in detail. This helps our AI find matches.</p>
+                        </div>
+                        <div class="chat-input-area">
+                            <textarea class="form-textarea" x-model="description"
+                                placeholder="Color, brand, distinguishing features, any text or markings..."
+                                rows="3"></textarea>
+                            <div style="margin-top: 12px; display: flex; gap: 8px; justify-content: flex-end;">
+                                <button class="btn btn-ghost btn-sm" @click="prevStep()">← Back</button>
+                                <button class="btn btn-primary btn-sm" @click="nextStep()"
+                                    :disabled="!description.trim()">Continue →</button>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- Step 4: Location -->
+                <template x-if="maxStep >= 4">
+                    <div class="chat-step animate-fade-in-up" :class="{ 'visible': step >= 4 }" data-step="4">
+                        <div class="chat-bubble chat-bubble-bot">
+                            <div class="chat-bubble-label">🤖 AI Assistant</div>
+                            <p x-text="reportType === 'lost' ? 'Where did you last see it?' : 'Where did you find it?'">
+                            </p>
+                        </div>
+                        <div class="chat-input-area">
+                            <div class="location-grid">
+                                <div class="form-group" style="margin-bottom: 0;">
+                                    <label class="form-label">Block / Area</label>
+                                    <select class="form-select" x-model="block" @change="onBlockChange()">
+                                        <option value="">Select...</option>
+                                        <template x-for="b in blockNames" :key="b">
+                                            <option :value="b" x-text="b"></option>
+                                        </template>
+                                    </select>
+                                </div>
+                                <div class="form-group" style="margin-bottom: 0;">
+                                    <label class="form-label">Floor / Section</label>
+                                    <select class="form-select" x-model="floor"
+                                        :disabled="availableFloors.length === 0">
+                                        <option value="">Select...</option>
+                                        <template x-for="f in availableFloors" :key="f">
+                                            <option :value="f" x-text="f"></option>
+                                        </template>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-group" style="margin-top: 12px;">
+                                <label class="form-label">Specific Location (Optional)</label>
+                                <input type="text" class="form-input" x-model="specificLocation"
+                                    placeholder="e.g. Near Room 204, Lab A1">
+                            </div>
+                            <div style="display: flex; gap: 8px; justify-content: flex-end;">
+                                <button class="btn btn-ghost btn-sm" @click="prevStep()">← Back</button>
+                                <button class="btn btn-primary btn-sm" @click="nextStep()" :disabled="!block">Continue
+                                    →</button>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- Step 5: Date -->
+                <template x-if="maxStep >= 5">
+                    <div class="chat-step animate-fade-in-up" :class="{ 'visible': step >= 5 }" data-step="5">
+                        <div class="chat-bubble chat-bubble-bot">
+                            <div class="chat-bubble-label">🤖 AI Assistant</div>
+                            <p x-text="reportType === 'lost' ? 'When did you lose it?' : 'When did you find it?'"></p>
+                        </div>
+                        <div class="chat-input-area">
+                            <input type="date" class="form-input" x-model="dateReported"
+                                :max="new Date().toISOString().slice(0,10)">
+                            <div style="margin-top: 12px; display: flex; gap: 8px; justify-content: flex-end;">
+                                <button class="btn btn-ghost btn-sm" @click="prevStep()">← Back</button>
+                                <button class="btn btn-primary btn-sm" @click="nextStep()"
+                                    :disabled="!dateReported">Continue →</button>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- Step 6: Image Upload -->
+                <template x-if="maxStep >= 6">
+                    <div class="chat-step animate-fade-in-up" :class="{ 'visible': step >= 6 }" data-step="6">
+                        <div class="chat-bubble chat-bubble-bot">
+                            <div class="chat-bubble-label">🤖 AI Assistant</div>
+                            <p>Upload a photo of the item. This greatly improves AI matching accuracy! 📸</p>
+                        </div>
+                        <div class="chat-input-area">
+                            <label class="image-upload-area" :class="{ 'has-image': imagePreview }"
+                                style="display: block;">
+                                <template x-if="!imagePreview">
+                                    <div>
+                                        <div class="image-upload-icon">📷</div>
+                                        <div class="image-upload-text">Tap to upload a photo</div>
+                                    </div>
+                                </template>
+                                <template x-if="imagePreview">
+                                    <img :src="imagePreview" class="image-preview" alt="Preview">
+                                </template>
+                                <input type="file" accept="image/*" capture="environment" @change="handleImageSelect"
+                                    style="display: none;">
+                            </label>
+                            <div style="margin-top: 12px; display: flex; gap: 8px; justify-content: flex-end;">
+                                <button class="btn btn-ghost btn-sm" @click="prevStep()">← Back</button>
+                                <button class="btn btn-primary btn-sm" @click="nextStep()">Continue →</button>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- Step 7: Review & Submit -->
+                <template x-if="maxStep >= 7">
+                    <div class="chat-step animate-fade-in-up" :class="{ 'visible': step >= 7 }" data-step="7">
+                        <div class="chat-bubble chat-bubble-bot">
+                            <div class="chat-bubble-label">🤖 AI Assistant</div>
+                            <p>Great! Here's a summary of your report. Ready to submit?</p>
+                        </div>
+                        <div class="chat-input-area">
+                            <div class="glass-card" style="padding: 20px; margin-bottom: 16px;" @mouseenter=""
+                                @mouseleave="">
+                                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+                                    <span x-html="typeBadge(reportType)"></span>
+                                    <strong x-text="itemName" style="font-size: 1.063rem;"></strong>
+                                </div>
+                                <div
+                                    style="font-size: 0.875rem; color: var(--text-secondary); display: grid; gap: 6px;">
+                                    <div>📂 <strong>Category:</strong> <span x-text="category"></span></div>
+                                    <div>📝 <strong>Description:</strong> <span x-text="description"></span></div>
+                                    <div>📍 <strong>Location:</strong> <span
+                                            x-text="block + (floor ? ' → ' + floor : '') + (specificLocation ? ' → ' + specificLocation : '')"></span>
+                                    </div>
+                                    <div>📅 <strong>Date:</strong> <span x-text="dateReported"></span></div>
+                                    <div x-show="imagePreview">📷 <strong>Image:</strong> Attached ✅</div>
+                                </div>
+                            </div>
+                            <div style="display: flex; gap: 8px; justify-content: flex-end;">
+                                <button class="btn btn-ghost btn-sm" @click="prevStep()">← Back</button>
+                                <button class="btn btn-lg btn-block"
+                                    :class="reportType === 'lost' ? 'btn-danger' : 'btn-success'"
+                                    @click="submitReport()" :disabled="submitting">
+                                    <span x-show="!submitting"
+                                        x-text="'Submit ' + reportType.charAt(0).toUpperCase() + reportType.slice(1) + ' Report'"></span>
+                                    <span x-show="submitting" class="spinner"></span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+            </div>
+
+            <!-- My Reports Section -->
+            <div class="my-reports-section" style="max-width: 600px; margin-left: auto; margin-right: auto;">
+                <h2 style="font-size: 1.25rem; margin-bottom: 4px;">📦 My Reports</h2>
+                <p style="color: var(--text-muted); font-size: 0.875rem; margin-bottom: 16px;">Track the status of your
+                    submitted reports</p>
+
+                <div x-show="loadingReports" style="text-align: center; padding: 32px;">
+                    <span class="spinner"></span>
+                </div>
+
+                <div x-show="!loadingReports && myReports.length === 0" class="empty-state">
+                    <div class="empty-state-icon">📭</div>
+                    <div class="empty-state-text">No reports yet. Submit your first report above!</div>
+                </div>
+
+                <div class="reports-grid">
+                    <template x-for="report in myReports" :key="report.id">
+                        <div class="report-card">
+                            <div class="report-card-header">
+                                <span class="report-card-title" x-text="report.item_name"></span>
+                                <span x-html="typeBadge(report.type)"></span>
+                            </div>
+                            <div class="report-card-meta">
+                                <span>📂 <span x-text="report.category"></span></span>
+                                <span>📍 <span
+                                        x-text="report.block + (report.floor ? ' → ' + report.floor : '')"></span></span>
+                                <span>📅 <span x-text="report.date_reported"></span></span>
+                            </div>
+                            <div class="report-card-desc" x-text="report.description"></div>
+                            <div style="margin-top: 8px;" x-html="statusBadge(report.status)"></div>
+                            <img x-show="report.image_path" :src="'/uploads/' + report.image_path"
+                                class="report-card-image" alt="Report image" loading="lazy">
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </div>
+
+        <!-- Success Overlay -->
+        <div x-show="showSuccess" x-transition class="success-overlay">
+            <div class="success-content">
+                <div class="success-icon">✅</div>
+                <h2 class="success-title">Report Submitted!</h2>
+                <p class="success-message">Our AI is now scanning for potential matches.</p>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

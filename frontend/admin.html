@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description"
+        content="Admin Dashboard — Manage lost & found reports, view AI matches, and update statuses.">
+    <title>Admin Dashboard — Campus Lost & Found</title>
+    <link rel="stylesheet" href="/css/styles.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="/js/api.js"></script>
+    <script src="/js/admin.js"></script>
+</head>
+
+<body>
+    <div x-data="createAdminApp()" x-init="init()" class="dashboard-layout">
+        <!-- Header -->
+        <header class="dashboard-header">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <button class="mobile-sidebar-toggle" @click="toggleSidebar()">☰ Filters</button>
+                <div class="dashboard-brand">
+                    <span class="dashboard-brand-icon">🛡️</span>
+                    <div>
+                        <div class="dashboard-brand-text">Admin Dashboard</div>
+                        <div class="dashboard-brand-sub">Lost & Found Control Center</div>
+                    </div>
+                </div>
+            </div>
+            <div class="dashboard-user">
+                <div style="text-align: right;">
+                    <div class="dashboard-user-name" x-text="user?.username"></div>
+                    <div class="dashboard-user-section" style="color: var(--accent); font-weight: 600;">Administrator
+                    </div>
+                </div>
+                <button class="btn-logout" onclick="logout()">Logout</button>
+            </div>
+        </header>
+
+        <!-- Main Layout -->
+        <div class="admin-layout">
+            <!-- Sidebar Overlay (Mobile) -->
+            <div class="sidebar-overlay" :class="{ active: sidebarOpen }" @click="sidebarOpen = false"></div>
+
+            <!-- Sidebar -->
+            <aside class="admin-sidebar" :class="{ 'mobile-open': sidebarOpen }">
+                <div class="admin-sidebar-title">⚙️ Filters</div>
+
+                <!-- Section Filter -->
+                <div class="filter-group">
+                    <div class="filter-group-label">Section</div>
+                    <div class="filter-chips">
+                        <button class="filter-chip" :class="{ active: sectionFilter === 'IT-A' }"
+                            @click="applyFilter('section', 'IT-A')">IT-A</button>
+                        <button class="filter-chip" :class="{ active: sectionFilter === 'IT-B' }"
+                            @click="applyFilter('section', 'IT-B')">IT-B</button>
+                        <button class="filter-chip" :class="{ active: sectionFilter === 'IT-C' }"
+                            @click="applyFilter('section', 'IT-C')">IT-C</button>
+                    </div>
+                </div>
+
+                <!-- Time Filter -->
+                <div class="filter-group">
+                    <div class="filter-group-label">Time Period</div>
+                    <div class="filter-chips">
+                        <button class="filter-chip" :class="{ active: timeFilter === 'today' }"
+                            @click="applyFilter('time', 'today')">Today</button>
+                        <button class="filter-chip" :class="{ active: timeFilter === 'this_week' }"
+                            @click="applyFilter('time', 'this_week')">This Week</button>
+                        <button class="filter-chip" :class="{ active: timeFilter === 'last_week' }"
+                            @click="applyFilter('time', 'last_week')">Last Week</button>
+                        <button class="filter-chip" :class="{ active: timeFilter === 'this_month' }"
+                            @click="applyFilter('time', 'this_month')">This Month</button>
+                        <button class="filter-chip" :class="{ active: timeFilter === 'last_month' }"
+                            @click="applyFilter('time', 'last_month')">Last Month</button>
+                        <button class="filter-chip" :class="{ active: timeFilter === 'this_year' }"
+                            @click="applyFilter('time', 'this_year')">This Year</button>
+                        <button class="filter-chip" :class="{ active: timeFilter === 'last_year' }"
+                            @click="applyFilter('time', 'last_year')">Last Year</button>
+                    </div>
+                </div>
+
+                <!-- Status Filter -->
+                <div class="filter-group">
+                    <div class="filter-group-label">Status</div>
+                    <div class="filter-chips">
+                        <button class="filter-chip" :class="{ active: statusFilter === 'pending' }"
+                            @click="applyFilter('status', 'pending')">⏳ Pending</button>
+                        <button class="filter-chip" :class="{ active: statusFilter === 'match_found' }"
+                            @click="applyFilter('status', 'match_found')">🔗 Match Found</button>
+                        <button class="filter-chip" :class="{ active: statusFilter === 'closed' }"
+                            @click="applyFilter('status', 'closed')">✅ Closed</button>
+                    </div>
+                </div>
+
+                <!-- Type Filter -->
+                <div class="filter-group">
+                    <div class="filter-group-label">Report Type</div>
+                    <div class="filter-chips">
+                        <button class="filter-chip" :class="{ active: typeFilter === 'lost' }"
+                            @click="applyFilter('type', 'lost')">🔴 Lost</button>
+                        <button class="filter-chip" :class="{ active: typeFilter === 'found' }"
+                            @click="applyFilter('type', 'found')">🟢 Found</button>
+                    </div>
+                </div>
+
+                <!-- Clear -->
+                <button class="btn btn-outline btn-sm btn-block" @click="clearFilters()" style="margin-top: 8px;">Clear
+                    All Filters</button>
+            </aside>
+
+            <!-- Main Content -->
+            <main class="admin-main">
+                <!-- Stats -->
+                <div class="admin-stats">
+                    <div class="stat-card">
+                        <div class="stat-value" x-text="stats.total">0</div>
+                        <div class="stat-label">Total Reports</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" style="color: var(--warning);" x-text="stats.pending">0</div>
+                        <div class="stat-label">Pending</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" style="color: var(--info);" x-text="stats.matched">0</div>
+                        <div class="stat-label">Matched</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" style="color: var(--success);" x-text="stats.closed">0</div>
+                        <div class="stat-label">Closed</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" style="color: var(--danger);" x-text="stats.lost">0</div>
+                        <div class="stat-label">Lost Items</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" style="color: var(--success);" x-text="stats.found">0</div>
+                        <div class="stat-label">Found Items</div>
+                    </div>
+                </div>
+
+                <!-- Tabs -->
+                <div class="admin-tabs">
+                    <button class="admin-tab" :class="{ active: activeTab === 'reports' }"
+                        @click="activeTab = 'reports'">
+                        📋 All Reports
+                    </button>
+                    <button class="admin-tab" :class="{ active: activeTab === 'matches' }"
+                        @click="activeTab = 'matches'">
+                        🤖 AI Matches
+                        <span x-show="matches.length > 0"
+                            style="background: var(--accent); color: white; border-radius: 10px; padding: 2px 8px; font-size: 0.688rem; margin-left: 4px;"
+                            x-text="matches.length"></span>
+                    </button>
+                </div>
+
+                <!-- Reports Tab -->
+                <div x-show="activeTab === 'reports'">
+                    <div x-show="loading" style="text-align: center; padding: 48px;">
+                        <span class="spinner"></span>
+                    </div>
+
+                    <div x-show="!loading && reports.length === 0" class="empty-state">
+                        <div class="empty-state-icon">📭</div>
+                        <div class="empty-state-text">No reports found with the current filters.</div>
+                    </div>
+
+                    <template x-for="report in reports" :key="report.id">
+                        <div class="admin-report-card" :class="{ 'new-report': isNewReport(report.id) }">
+                            <div class="admin-report-row">
+                                <img x-show="report.image_path" :src="'/uploads/' + report.image_path"
+                                    class="admin-report-image" alt="Item" loading="lazy">
+                                <div class="admin-report-info">
+                                    <div class="admin-report-top">
+                                        <span class="admin-report-name" x-text="report.item_name"></span>
+                                        <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                                            <span x-html="typeBadge(report.type)"></span>
+                                            <span x-html="statusBadge(report.status)"></span>
+                                        </div>
+                                    </div>
+                                    <div class="admin-report-meta">
+                                        <span>👤 <span x-text="report.username"></span></span>
+                                        <span>🏷️ <span x-text="report.section"></span></span>
+                                        <span>📂 <span x-text="report.category"></span></span>
+                                        <span>📍 <span
+                                                x-text="report.block + (report.floor ? ' → ' + report.floor : '')"></span></span>
+                                        <span>📅 <span x-text="formatDate(report.created_at)"></span></span>
+                                    </div>
+                                    <div class="admin-report-desc" x-text="report.description"></div>
+                                    <div class="admin-report-actions">
+                                        <button x-show="report.status === 'pending'" class="btn btn-primary btn-sm"
+                                            @click="updateStatus(report.id, 'match_found')">
+                                            🔗 Mark as Match Found
+                                        </button>
+                                        <button x-show="report.status === 'match_found'" class="btn btn-success btn-sm"
+                                            @click="updateStatus(report.id, 'closed')">
+                                            ✅ Close Report
+                                        </button>
+                                        <span x-show="report.status === 'closed'"
+                                            style="font-size: 0.813rem; color: var(--success); font-weight: 600;">
+                                            ✅ Resolved
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+
+                <!-- Matches Tab -->
+                <div x-show="activeTab === 'matches'">
+                    <div x-show="matches.length === 0" class="empty-state">
+                        <div class="empty-state-icon">🤖</div>
+                        <div class="empty-state-text">No AI matches found yet. Matches appear when lost and found items
+                            have similar descriptions or images.</div>
+                    </div>
+
+                    <template x-for="match in matches" :key="match.id">
+                        <div class="match-card">
+                            <!-- Score Header -->
+                            <div
+                                style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                                <span style="font-weight: 700; font-size: 0.875rem;">AI Match Score</span>
+                                <span style="font-weight: 800; font-size: 1.25rem;"
+                                    :style="{ color: scoreColor(match.combined_score) }"
+                                    x-text="scorePercent(match.combined_score) + '%'"></span>
+                            </div>
+
+                            <!-- Score Bar -->
+                            <div class="match-score-bar">
+                                <div class="match-score-fill"
+                                    :style="{ width: scorePercent(match.combined_score) + '%' }"></div>
+                            </div>
+
+                            <!-- Score Breakdown -->
+                            <div
+                                style="display: flex; gap: 16px; font-size: 0.75rem; color: var(--text-muted); margin-bottom: 16px;">
+                                <span>📷 Image: <strong
+                                        x-text="scorePercent(match.image_similarity) + '%'"></strong></span>
+                                <span>📝 Text: <strong
+                                        x-text="scorePercent(match.text_similarity) + '%'"></strong></span>
+                            </div>
+
+                            <!-- Pair -->
+                            <div class="match-pair">
+                                <!-- Lost Item -->
+                                <div class="match-item" style="border-left: 3px solid var(--danger);">
+                                    <div style="margin-bottom: 4px;"><span class="badge badge-lost">🔴 Lost</span></div>
+                                    <div class="match-item-name" x-text="match.lost_report?.item_name"></div>
+                                    <div class="match-item-user" x-text="'by ' + (match.lost_report?.username || '—')">
+                                    </div>
+                                    <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 4px;"
+                                        x-text="match.lost_report?.description?.substring(0, 80) + '...'"></div>
+                                </div>
+
+                                <!-- VS -->
+                                <div class="match-vs">⚡</div>
+
+                                <!-- Found Item -->
+                                <div class="match-item" style="border-left: 3px solid var(--success);">
+                                    <div style="margin-bottom: 4px;"><span class="badge badge-found">🟢 Found</span>
+                                    </div>
+                                    <div class="match-item-name" x-text="match.found_report?.item_name"></div>
+                                    <div class="match-item-user" x-text="'by ' + (match.found_report?.username || '—')">
+                                    </div>
+                                    <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 4px;"
+                                        x-text="match.found_report?.description?.substring(0, 80) + '...'"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </main>
+        </div>
+    </div>
+</body>
+
+</html>

@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="AI Powered Campus Lost & Found System — Report and recover lost items on campus with AI-assisted matching.">
+    <title>Campus Lost & Found — Login</title>
+    <link rel="stylesheet" href="/css/styles.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="/js/api.js"></script>
+    <script src="/js/login.js"></script>
+</head>
+<body>
+    <div x-data="createLoginApp()" class="login-container">
+        <!-- Animated background -->
+        <div class="login-bg" :class="{ 'admin-mode': isAdmin }" style="transition: background 0.6s cubic-bezier(0.4,0,0.2,1)"></div>
+        <div class="login-bg-orbs">
+            <div class="orb orb-1"></div>
+            <div class="orb orb-2"></div>
+            <div class="orb orb-3"></div>
+        </div>
+
+        <!-- Login Card -->
+        <div class="login-card glass-card animate-scale-in" :class="{ 'admin-mode': isAdmin }">
+            <!-- Header -->
+            <div class="login-header">
+                <div class="login-logo" x-text="isAdmin ? '🛡️' : '🎓'"></div>
+                <h1 class="login-title" x-text="isAdmin ? 'Admin Portal' : 'Student Login'" style="transition: color 0.5s ease"></h1>
+                <p class="login-subtitle" x-text="isAdmin ? 'Manage campus lost & found reports' : 'Report lost or found items on campus'" style="transition: color 0.5s ease"></p>
+            </div>
+
+            <!-- Error -->
+            <div x-show="error" x-transition class="login-error" x-text="error"></div>
+
+            <!-- Form -->
+            <form @submit.prevent="login" autocomplete="off">
+                <div class="form-group">
+                    <label class="form-label" x-text="isAdmin ? 'Admin Username' : 'Roll Number'">Username</label>
+                    <input 
+                        type="text" 
+                        class="form-input" 
+                        x-model="username" 
+                        :placeholder="isAdmin ? 'Enter admin username' : 'e.g. 727625BIT116'"
+                        autocomplete="off"
+                        required
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Password</label>
+                    <input 
+                        type="password" 
+                        class="form-input" 
+                        x-model="password" 
+                        placeholder="Enter your password"
+                        autocomplete="off"
+                        required
+                    >
+                </div>
+
+                <button 
+                    type="submit" 
+                    class="btn btn-block btn-lg"
+                    :class="isAdmin ? 'btn-navy' : 'btn-primary'"
+                    :disabled="loading"
+                    style="margin-top: 8px; transition: background 0.5s ease, box-shadow 0.5s ease;"
+                >
+                    <span x-show="!loading" x-text="isAdmin ? '🔐 Admin Sign In' : '🚀 Sign In'"></span>
+                    <span x-show="loading" class="spinner"></span>
+                </button>
+            </form>
+
+            <!-- Switch -->
+            <div class="login-switch">
+                <button @click="switchMode" type="button">
+                    <span x-text="isAdmin ? '← Back to Student Login' : 'Switch to Admin Portal →'"></span>
+                </button>
+            </div>
+
+            <!-- Footer -->
+            <div style="text-align: center; margin-top: 24px; font-size: 0.75rem; color: var(--text-muted);">
+                AI Powered Campus Lost & Found System<br>
+                <span style="opacity: 0.7;">Built with ❤️ for MCET</span>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
